@@ -148,6 +148,41 @@ MT_DEFINE_TEST(reset)
     MT_CHECK_THAT(sb.size == 0);
 }
 
+MT_DEFINE_TEST(clone)
+{
+    StringBuilder src = sb_init();
+    sb_append(&src, "Foo", "Bar", "Baz");
+
+    StringBuilder dst = sb_init();
+    sb_clone(&src, &dst);
+
+    MT_ASSERT_THAT(src.buffer != NULL);
+    MT_ASSERT_THAT(src.size == src.size);
+
+    MT_ASSERT_THAT(dst.buffer != NULL);
+    MT_ASSERT_THAT(dst.size == src.size);
+
+    MT_CHECK_THAT(strcmp(src.buffer, "FooBarBaz") == 0);
+    MT_CHECK_THAT(strcmp(dst.buffer, "FooBarBaz") == 0);
+}
+
+MT_DEFINE_TEST(move)
+{
+    StringBuilder src = sb_init();
+    sb_append(&src, "Foo", "Bar", "Baz");
+
+    StringBuilder dst = sb_move(&src);
+
+    MT_ASSERT_THAT(src.buffer   == NULL);
+    MT_ASSERT_THAT(src.size     == 0);
+    MT_ASSERT_THAT(src.capacity == 0);
+
+    MT_ASSERT_THAT(dst.buffer != NULL);
+    MT_ASSERT_THAT(dst.size == 9);
+
+    MT_CHECK_THAT(strcmp(dst.buffer, "FooBarBaz") == 0);
+}
+
 int
 main(void)
 {
@@ -167,6 +202,9 @@ main(void)
 
     MT_RUN_TEST(free);
     MT_RUN_TEST(reset);
+
+    MT_RUN_TEST(clone);
+    MT_RUN_TEST(move);
 
     MT_PRINT_SUMMARY();
     return MT_EXIT_CODE;

@@ -5,7 +5,7 @@
  * \__ \ | |_) |  _  | | | |
  * |___/ |_.__/  (_) |_| |_|
  *
- *  sb.h - v1.0.0
+ *  sb.h - v1.0.1
  *
  *  This file is placed in the public domain.
  *  See end of file for license details.
@@ -100,6 +100,12 @@ typedef struct {
 // Initialize an empty string builder
 SB_NODISCARD SBDEF StringBuilder sb_init(SB_NO_PARAMS) SB_NOEXCEPT;
 
+// Clone a builder by copying the data of src into dst
+SB_NODISCARD SBDEF bool sb_clone(const StringBuilder *src, StringBuilder *dst) SB_NOEXCEPT;
+
+// Move the contents of a builder to another. 'from' gets reset.
+SB_NODISCARD SBDEF StringBuilder sb_move(StringBuilder *from) SB_NOEXCEPT;
+
 // Free builder buffer and reset
 SBDEF void sb_free(StringBuilder *sb) SB_NOEXCEPT;
 
@@ -123,7 +129,7 @@ SB_NODISCARD SBDEF bool sb_append_(StringBuilder *sb, const char *new_data1, ...
 SB_NODISCARD SBDEF bool sb_append_char(StringBuilder *sb, char c) SB_NOEXCEPT;
 
 // Append one string builder's content to another's. 'app' is appended to 'sb'.
-SB_NODISCARD SBDEF bool sb_append_sb(StringBuilder *sb, StringBuilder *app) SB_NOEXCEPT;
+SB_NODISCARD SBDEF bool sb_append_sb(StringBuilder *sb, const StringBuilder *app) SB_NOEXCEPT;
 
 // Append a formatted string to builder. Formatting follows sprintf semantics.
 SB_NODISCARD SBDEF bool sb_appendf(StringBuilder *sb, const char *fmt, ...) SB_NOEXCEPT;
@@ -140,6 +146,7 @@ SB_NODISCARD SBDEF char *sb_to_cstr(StringBuilder *sb) SB_NOEXCEPT;
 #ifdef SB_IMPLEMENTATION
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -147,6 +154,30 @@ SBDEF StringBuilder
 sb_init(SB_NO_PARAMS) SB_NOEXCEPT
 {
     StringBuilder result = {SB_NULL, 0, 0};
+
+    return result;
+}
+
+SBDEF bool
+sb_clone(const StringBuilder *src, StringBuilder *dst) SB_NOEXCEPT
+{
+    sb_reset(dst);
+    if (src->size == 0) return true;
+
+    if (!sb_reserve(dst, src->size)) return false;
+    memcpy(dst->buffer, src->buffer, src->size + 1); // include '\0'
+    dst->size = src->size;
+    return true;
+}
+
+SBDEF StringBuilder
+sb_move(StringBuilder *from) SB_NOEXCEPT
+{
+    StringBuilder result = *from;
+
+    from->buffer   = NULL;
+    from->capacity = 0;
+    from->size     = 0;
 
     return result;
 }
@@ -164,7 +195,7 @@ SBDEF void
 sb_reset(StringBuilder *sb) SB_NOEXCEPT
 {
     sb->size = 0;
-    sb->buffer[0] = '\0';
+    if (sb->capacity && sb->buffer) sb->buffer[0] = '\0';
 }
 
 static inline bool
@@ -177,14 +208,19 @@ sb_grow_to_fit_(StringBuilder *sb, size_t n) SB_NOEXCEPT
     size_t new_cap = sb->capacity ? sb->capacity : SB_START_SIZE;
 
     // Exponential growth until threshold
-    while (new_cap < np1 && new_cap < SB_LIN_THRESHOLD) new_cap *= SB_EXP_GROWTH_FACTOR;
+    while (new_cap < np1 && new_cap < SB_LIN_THRESHOLD) {
+        if (new_cap > SIZE_MAX / SB_EXP_GROWTH_FACTOR) { new_cap = SIZE_MAX; break; } // Overflow protection
+        new_cap *= SB_EXP_GROWTH_FACTOR;
+    }
 
     // Linear growth after threshold
-    while (new_cap < np1) new_cap += SB_LIN_GROWTH_FACTOR;
+    while (new_cap < np1) {
+        if (new_cap > SIZE_MAX - SB_LIN_GROWTH_FACTOR) { new_cap = SIZE_MAX; break; } // Overflow protection
+        new_cap += SB_LIN_GROWTH_FACTOR;
+    }
 
     void *new_buffer = SB_REALLOC(sb->buffer, new_cap);
     if (!new_buffer) {
-        sb_free(sb);
         return false;
     }
 
@@ -219,6 +255,7 @@ sb_append_one_n(StringBuilder *sb, const char *str, size_t len) SB_NOEXCEPT
 SBDEF bool
 sb_append_one(StringBuilder *sb, const char *str) SB_NOEXCEPT
 {
+    if (!str) return false;
     size_t len = strlen(str);
     return sb_append_one_n(sb, str, len);
 }
@@ -251,7 +288,7 @@ sb_append_char(StringBuilder *sb, char c) SB_NOEXCEPT
 }
 
 SBDEF bool
-sb_append_sb(StringBuilder *sb, StringBuilder *app) SB_NOEXCEPT
+sb_append_sb(StringBuilder *sb, const StringBuilder *app) SB_NOEXCEPT
 {
     if (app->size) return sb_append_one_n(sb, app->buffer, app->size);
     return true;
@@ -266,15 +303,13 @@ sb_appendf(StringBuilder *sb, const char *fmt, ...) SB_NOEXCEPT
     int len = vsnprintf(SB_NULL, 0, fmt, args);
     va_end(args);
     if (len < 0) {
-        sb_free(sb);
         return false;
     }
-    size_t len_z = len + 1;
 
-    if (!sb_grow_to_fit_(sb, sb->size + len_z)) return false;
+    if (!sb_grow_to_fit_(sb, sb->size + (size_t)len)) return false;
 
     va_start(args, fmt);
-    vsnprintf(sb->buffer + sb->size, len_z, fmt, args);
+    vsnprintf(sb->buffer + sb->size, (size_t)len + 1, fmt, args);
     va_end(args);
 
     sb->size += len;
