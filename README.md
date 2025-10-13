@@ -1,8 +1,8 @@
-# sb.h
+# str.h
 
 ![CI](https://github.com/rsore/sb/actions/workflows/test.yml/badge.svg)
 
-`sb.h` is a single-header library for string building in C and C++. Drop it into your project and you're good to go.
+`str.h` is a single-header library for strings in C and C++. Drop it into your project and you're good to go.
 Only requirement is libc.
 It’s lightweight, portable across major platforms, and public domain.
 
