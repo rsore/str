@@ -39,10 +39,10 @@ jobs:
       - name: Compile test
         run: |
           ${{ matrix.compiler }} -Wall -Wextra -Werror -pedantic-errors -std=${{ matrix.standard }} \
-            -o sb_test test/sb_test.c
+            -o str_test test/str_test.c
 
       - name: Run test
-        run: ./sb_test
+        run: ./str_test
 
   build-and-test-linux-cpp:
     runs-on: ubuntu-latest
@@ -75,10 +75,10 @@ jobs:
       - name: Compile test
         run: |
           ${{ matrix.compiler }} -x c++ -Wall -Wextra -Werror -pedantic-errors -std=${{ matrix.standard }} \
-            -o sb_test test/sb_test.c
+            -o str_test test/str_test.c
 
       - name: Run test
-        run: ./sb_test
+        run: ./str_test
 
   build-and-test-windows-c:
     runs-on: windows-latest
@@ -95,10 +95,10 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cl /TC /W4 /WX /std:${{ matrix.standard }} test/sb_test.c /Fe:sb_test.exe /wd4127
+          cl /TC /W4 /WX /std:${{ matrix.standard }} test/str_test.c /Fe:str_test.exe /wd4127 /D_CRT_SECURE_NO_WARNINGS
 
       - name: Run test
-        run: .\sb_test.exe
+        run: .\str_test.exe
 
   build-and-test-windows-cpp:
     runs-on: windows-latest
@@ -115,10 +115,10 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cl /TP /W4 /WX /std:${{ matrix.standard }} test/sb_test.c /Fe:sb_test.exe /wd4127
+          cl /TP /W4 /WX /std:${{ matrix.standard }} test/str_test.c /Fe:str_test.exe /wd4127 /D_CRT_SECURE_NO_WARNINGS
 
       - name: Run test
-        run: .\sb_test.exe
+        run: .\str_test.exe
 
   build-and-test-macos-c:
     runs-on: macos-latest
@@ -134,10 +134,10 @@ jobs:
       - name: Compile test
         run: |
           clang -Wall -Wextra -Werror -pedantic-errors -std=${{ matrix.standard }} \
-            -o sb_test test/sb_test.c
+            -o str_test test/str_test.c
 
       - name: Run test
-        run: ./sb_test
+        run: ./str_test
 
   build-and-test-macos-cpp:
     runs-on: macos-latest
@@ -153,7 +153,7 @@ jobs:
       - name: Compile test
         run: |
           clang++ -x c++ -Wall -Wextra -Werror -pedantic-errors -std=${{ matrix.standard }} \
-            -o sb_test test/sb_test.c
+            -o str_test test/str_test.c
 
       - name: Run test
-        run: ./sb_test
+        run: ./str_test

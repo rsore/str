@@ -18,7 +18,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: sb.h
+          files: str.h
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   sync:
@@ -38,11 +38,11 @@ jobs:
 
       - name: Copy file
         run: |
-          cp sb.h rshlc/sb.h
+          cp str.h rshlc/str.h
 
       - name: Commit and push changes
         working-directory: rshlc
         run: |
           git add .
-          git commit -m "Update sb.h from release $GITHUB_REF_NAME"
+          git commit -m "Update str.h from release $GITHUB_REF_NAME"
           git push
